@@ -34,43 +34,77 @@ $form = new Form($db);
 $tpl = 'tpl/bankimport.new.tpl.php';
 
 $import = new BankImport($db);
+$format = GETPOST('bankimportmapping', 'inputFormat');
 
-if(GETPOST('compare','alphanohtml')) {
 
-	$datestart = dol_mktime(0, 0, 0, GETPOST('dsmonth','int'), GETPOST('dsday','int'), GETPOST('dsyear','int'));
-	$dateend = dol_mktime(0, 0, 0, GETPOST('demonth','int'), GETPOST('deday','int'), GETPOST('deyear','int'));
-	$numreleve = GETPOST('numreleve','alphanohtml');
-	$hasHeader = GETPOST('hasheader','alphanohtml');
+if (GETPOST('compare', 'alphanohtml')) {
 
-	if($import->analyse(GETPOST('accountid','int'), 'bankimportfile', $datestart, $dateend, $numreleve, $hasHeader)) {
+    //erics import PDF via docwizon
+    if (isset($_FILES) && isset($_FILES['bankimportfile'])) {
+        $filename = $_FILES['bankimportfile']['tmp_name'];
+        if (is_file($filename)) {
+            print "<p>Analyse de $filename</p>";
+            $dstFile = dirname($_FILES['bankimportfile']['tmp_name']) . '/' . $_FILES['bankimportfile']['name'];
+            copy($_FILES['bankimportfile']['tmp_name'], $dstFile);
 
-		$import->load_transactions(GETPOST('bankimportseparator','alphanohtml'), GETPOST('bankimportdateformat','alphanohtml'), GETPOST('bankimportmapping','alphanohtml'));
-		$import->compare_transactions();
+            dol_include_once('/scanconnect/class/scanConnect.class.php');
+            $scanConnect = new scanConnect([
+                'db'=>$db,
+                'srcFileName'=> $dstFile,
+                'ymlFileName' => '',
+                'profile' => 'bank',
+                'action' => 'default',
+                'lang' => 'fra',
+                'pluginName' => 'ATM+CAP-REL/BankImport+DocWizOn'
+            ]);
 
-		$TTransactions = $import->TFile;
+            $res =$scanConnect->runAnalyze();
+            if ($res) {
+                $data = $scanConnect->getResult();
+                //Ecrase le fichier "pdf" par le json
+                file_put_contents($filename, json_encode($data['json'], JSON_PRETTY_PRINT));
+                $jsonFilename = str_replace('.pdf', '.json', $_FILES['bankimportfile']['name']);
+                $_FILES['bankimportfile']['name'] = $jsonFilename;
+            } else {
+                print "<p>ERREUR:</p>";
+                print $scanConnect->error;
+            }
+        }
+    }
 
-		global $bc;
 
-		$langs->load('bankimport@bankimport');
-		$var = true;
-		$tpl = 'tpl/bankimport.check.tpl.php';
-	}
-} else if(GETPOST('import','alphanohtml')) {
+    $datestart = dol_mktime(0, 0, 0, GETPOST('dsmonth', 'int'), GETPOST('dsday', 'int'), GETPOST('dsyear', 'int'));
+    $dateend = dol_mktime(0, 0, 0, GETPOST('demonth', 'int'), GETPOST('deday', 'int'), GETPOST('deyear', 'int'));
+    $numreleve = GETPOST('numreleve', 'alphanohtml');
+    $hasHeader = GETPOST('hasheader', 'alphanohtml');
 
-	if(
-		$import->analyse(
-			GETPOST('accountid','int'),
-			GETPOST('filename','alpha'),
-			GETPOST('datestart','int'),
-			GETPOST('dateend','int'),
-			GETPOST('numreleve','alphanohtml'),
-			GETPOST('hasheader','alphanohtml')
-		)
-	) {
-		$import->load_transactions(GETPOST('bankimportseparator','alpha'), GETPOST('bankimportdateformat','alphanohtml'), GETPOST('bankimportmapping','alphanohtml'));
-		$import->import_data(GETPOST('TLine','array'));
-		$tpl = 'tpl/bankimport.end.tpl.php';
-	}
+    if ($import->analyse(GETPOST('accountid', 'int'), 'bankimportfile', $datestart, $dateend, $numreleve, $hasHeader)) {
+        $import->load_transactions(GETPOST('bankimportseparator', 'alphanohtml'), GETPOST('bankimportdateformat', 'alphanohtml'), GETPOST('bankimportmapping', 'alphanohtml'), '"', $format);
+        $import->compare_transactions();
+
+        $TTransactions = $import->TFile;
+
+        global $bc;
+
+        $langs->load('bankimport@bankimport');
+        $var = true;
+        $tpl = 'tpl/bankimport.check.tpl.php';
+    }
+} elseif (GETPOST('import', 'alphanohtml')) {
+    if (
+        $import->analyse(
+            GETPOST('accountid', 'int'),
+            GETPOST('filename', 'alpha'),
+            GETPOST('datestart', 'int'),
+            GETPOST('dateend', 'int'),
+            GETPOST('numreleve', 'alphanohtml'),
+            GETPOST('hasheader', 'alphanohtml')
+        )
+    ) {
+        $import->load_transactions(GETPOST('bankimportseparator', 'alpha'), GETPOST('bankimportdateformat', 'alphanohtml'), GETPOST('bankimportmapping', 'alphanohtml'), '"', $format);
+        $import->import_data(GETPOST('TLine', 'array'));
+        $tpl = 'tpl/bankimport.end.tpl.php';
+    }
 }
 
 llxHeader('', $langs->trans('TitleBankImport'));

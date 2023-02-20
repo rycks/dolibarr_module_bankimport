@@ -93,10 +93,11 @@ class BankImport
 		return true;
 	}
 
-	function load_transactions($delimiter='', $dateFormat='', $mapping_string='', $enclosure='"') {
-		$this->load_bank_transactions();
+	function load_transactions($delimiter='', $dateFormat='', $mapping_string='', $enclosure='"', $fileFormat='csv') {
 		$this->load_check_receipt();
-		$this->load_file_transactions($delimiter, $dateFormat, $mapping_string, $enclosure);
+		$this->load_file_transactions($delimiter, $dateFormat, $mapping_string, $enclosure, $fileFormat);
+		//en dernier car je recupere la date debut/fin dans la lecture du json
+		$this->load_bank_transactions();
 	}
 
 	// Load bank lines
@@ -131,8 +132,45 @@ class BankImport
 	}
 
 	// Load file lines
-	function load_file_transactions($delimiter='', $dateFormat='', $mapping_string='', $enclosure='"') {
+	function load_file_transactions($delimiter='', $dateFormat='', $mapping_string='', $enclosure='"', $fileFormat='csv') {
 		global $conf, $langs;
+
+		//erics : fichier json ?
+		$string = file_get_contents($this->file);
+		if ($string === false) {
+			print "<p>Erreur de lecture du fichier json 1</p>"; 
+    		return -1;
+		}
+		$json = json_decode($string);
+		if ($json === null) {
+			print "<p>Erreur de lecture du fichier json 2</p>"; 
+    		return -2;
+		}
+        if (isset($json->meta) && isset($json->meta->lines)) {
+			//read & set from json
+			$dt = DateTime::createFromFormat('Y-m-d', $json->meta->date_start);
+			$this->dateStart = $dt->getTimestamp();
+			$dt = DateTime::createFromFormat('Y-m-d', $json->meta->date_end);
+			$this->dateEnd = $dt->getTimestamp();
+	
+			// Statement number
+			$this->numReleve = $json->meta->document_number;
+			
+            foreach ($json->meta->lines as $line) {
+				$datetime = DateTime::createFromFormat($dateFormat, $line->date);
+				$data['datev'] = ($datetime === false) ? 0 : $datetime->getTimestamp();
+				$data['date'] = dol_print_date($data['datev'], 'day');
+				$data['credit'] = price2num($line->credit);
+				$data['debit'] =  price2num($line->debit);
+				$data['amount'] = (!empty($data['debit']) ? (0-$data['debit']) : $data['credit']);
+
+				$data['label'] = $line->label . ($line->label2 ??'') . ($line->label3 ?? '');
+				$data['error'] = '';
+
+				$this->TFile[] = $data;
+			}
+			return ;
+        }
 
 		if(empty($delimiter)) $delimiter = $conf->global->BANKIMPORT_SEPARATOR;
 		if(empty($dateFormat)) $dateFormat = strtr($conf->global->BANKIMPORT_DATE_FORMAT, array('%'=>''));
