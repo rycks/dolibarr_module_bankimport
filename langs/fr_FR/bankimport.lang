@@ -28,7 +28,7 @@ UseMacCompatibility=Activer la compatibilité Mac
 LeftMenuBankImport = Import bancaire
 
 # PAGE
-TitleBankImport = Import bancaire
+TitleBankImport = Import bancaire - ScanBANK
 BankImportFile = Fichier à importer
 BankCompareTransactions = Comparer les écritures
 BankImport = Procéder aux rapprochements automatiques et aux créations d'écritures
