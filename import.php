@@ -43,11 +43,12 @@ if (GETPOST('compare', 'alphanohtml')) {
     if (isset($_FILES) && isset($_FILES['bankimportfile'])) {
         $filename = $_FILES['bankimportfile']['tmp_name'];
         if (is_file($filename)) {
-            print "<p>Analyse de $filename</p>";
             $dstFile = dirname($_FILES['bankimportfile']['tmp_name']) . '/' . $_FILES['bankimportfile']['name'];
+            // print "<p>Analyse de $filename, copy to $dstFile</p>";
             copy($_FILES['bankimportfile']['tmp_name'], $dstFile);
 
             dol_include_once('/scanconnect/class/scanConnect.class.php');
+            // print "<p>include once ok</p>";
             $scanConnect = new scanConnect([
                 'db'=>$db,
                 'srcFileName'=> $dstFile,
@@ -58,6 +59,7 @@ if (GETPOST('compare', 'alphanohtml')) {
                 'pluginName' => 'ATM+CAP-REL/BankImport+DocWizOn'
             ]);
 
+            // print "<p>start analyse ...</p>";
             $res =$scanConnect->runAnalyze();
             if ($res) {
                 $data = $scanConnect->getResult();
