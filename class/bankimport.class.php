@@ -345,10 +345,10 @@ class BankImport
 				) . '">'
 				. $bankLine->num_releve
 				. '</a>';
-			$result = $langs->trans('AlreadyReconciledWithStatement', $link);
+			$result = $langs->transnoentitiesnoconv('AlreadyReconciledWithStatement', $link);
 			$autoaction = false;
-		} else {
-			$result = $langs->trans('WillBeReconciledWithStatement', $this->numReleve);
+		} else { 
+			$result = $langs->transnoentitiesnoconv('WillBeReconciledWithStatement', $this->numReleve);
 			$autoaction = true;
 		}
 
