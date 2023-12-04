@@ -33,6 +33,10 @@ include_once DOL_DOCUMENT_ROOT .'/core/modules/DolibarrModules.class.php';
  */
 class modBankImport extends DolibarrModules
 {
+	public $url_last_version;
+	public $tabs;
+	public $dictionaries;
+
 	/**
 	 *   Constructor. Define names, constants, directories, boxes, permissions
 	 *
